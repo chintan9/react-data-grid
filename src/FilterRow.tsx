@@ -1,28 +1,22 @@
-import React, { createElement } from 'react';
-import classNames from 'classnames';
+import React, { createElement, memo } from 'react';
+import clsx from 'clsx';
 
 import { CalculatedColumn, Filters } from './common/types';
 import { DataGridProps } from './DataGrid';
 
 type SharedDataGridProps<R, SR> = Pick<DataGridProps<R, never, SR>,
-| 'filters'
-| 'onFiltersChange'
+  | 'filters'
+  | 'onFiltersChange'
 >;
 
 export interface FilterRowProps<R, SR> extends SharedDataGridProps<R, SR> {
-  height: number;
-  width: number;
   lastFrozenColumnIndex: number;
   columns: readonly CalculatedColumn<R, SR>[];
-  scrollLeft: number | undefined;
 }
 
-export default function FilterRow<R, SR>({
-  height,
-  width,
+function FilterRow<R, SR>({
   columns,
   lastFrozenColumnIndex,
-  scrollLeft,
   filters,
   onFiltersChange
 }: FilterRowProps<R, SR>) {
@@ -33,14 +27,11 @@ export default function FilterRow<R, SR>({
   }
 
   return (
-    <div
-      className="rdg-header-row"
-      style={{ width, height, lineHeight: `${height}px` }}
-    >
+    <div className="rdg-filter-row">
       {columns.map(column => {
         const { key } = column;
 
-        const className = classNames('rdg-cell', {
+        const className = clsx('rdg-cell', {
           'rdg-cell-frozen': column.frozen,
           'rdg-cell-frozen-last': column.idx === lastFrozenColumnIndex
         });
@@ -48,10 +39,6 @@ export default function FilterRow<R, SR>({
           width: column.width,
           left: column.left
         };
-
-        if (column.frozen && typeof scrollLeft === 'number') {
-          style.transform = `translateX(${scrollLeft}px)`;
-        }
 
         return (
           <div
@@ -70,3 +57,5 @@ export default function FilterRow<R, SR>({
     </div>
   );
 }
+
+export default memo(FilterRow) as <R, SR>(props: FilterRowProps<R, SR>) => JSX.Element;

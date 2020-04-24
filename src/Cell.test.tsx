@@ -22,7 +22,6 @@ const testProps: CellRendererProps<Row> = {
   lastFrozenColumnIndex: -1,
   row: { id: 1, description: 'Wicklow' },
   isRowSelected: false,
-  scrollLeft: 0,
   eventBus: new EventBus()
 };
 
@@ -50,11 +49,6 @@ describe('Cell', () => {
     expect(formatterInstance.prop('row')[column.key]).toStrictEqual('Wicklow');
   });
 
-  it('should render children when those are passed', () => {
-    const wrapper = renderComponent({ children: <div>Child</div> });
-    expect(wrapper.children().text()).toBe('Child');
-  });
-
   describe('Rendering Cell component', () => {
     function shallowRenderComponent(props: CellRendererProps<Row>) {
       return mount(<Cell<Row> {...props} />);
@@ -66,7 +60,6 @@ describe('Cell', () => {
       lastFrozenColumnIndex: -1,
       row: helpers.rows[11],
       isRowSelected: false,
-      scrollLeft: 0,
       eventBus: new EventBus()
     };
 

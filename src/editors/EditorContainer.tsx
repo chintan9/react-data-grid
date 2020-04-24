@@ -1,31 +1,34 @@
 import React, { KeyboardEvent, useRef, useState, useLayoutEffect, useCallback, useEffect } from 'react';
-import classNames from 'classnames';
-import { Clear } from '@material-ui/icons';
+import clsx from 'clsx';
 
-import { CalculatedColumn, Editor, CommitEvent, Dimension, Omit } from '../common/types';
+import { CalculatedColumn, Editor, CommitEvent } from '../common/types';
 import SimpleTextEditor from './SimpleTextEditor';
 import ClickOutside from './ClickOutside';
 import { InteractionMasksProps } from '../masks/InteractionMasks';
 import { preventDefault } from '../utils';
 
-type SharedInteractionMasksProps<R, SR> = Pick<InteractionMasksProps<R, SR>, 'scrollLeft' | 'scrollTop'>;
+type SharedInteractionMasksProps<R, SR> = Pick<InteractionMasksProps<R, SR>,
+  | 'scrollLeft'
+  | 'scrollTop'
+  | 'rowHeight'
+>;
 
-export interface EditorContainerProps<R, SR> extends SharedInteractionMasksProps<R, SR>, Omit<Dimension, 'zIndex'> {
+export interface EditorContainerProps<R, SR> extends SharedInteractionMasksProps<R, SR> {
   rowIdx: number;
   row: R;
   column: CalculatedColumn<R, SR>;
-  onGridKeyDown?(e: KeyboardEvent): void;
-  onCommit(e: CommitEvent): void;
-  onCommitCancel(): void;
+  onCommit: (e: CommitEvent) => void;
+  onCommitCancel: () => void;
   firstEditorKeyPress: string | null;
+  top: number;
+  left: number;
 }
 
 export default function EditorContainer<R, SR>({
   rowIdx,
   column,
   row,
-  width,
-  height,
+  rowHeight,
   left,
   top,
   onCommit,
@@ -35,8 +38,19 @@ export default function EditorContainer<R, SR>({
   firstEditorKeyPress: key
 }: EditorContainerProps<R, SR>) {
   const editorRef = useRef<Editor>(null);
+  const changeCommitted = useRef(false);
+  const changeCanceled = useRef(false);
   const [isValid, setValid] = useState(true);
+  const prevScrollLeft = useRef(scrollLeft);
+  const prevScrollTop = useRef(scrollTop);
+  const isUnmounting = useRef(false);
+
   const getInputNode = useCallback(() => editorRef.current?.getInputNode(), []);
+
+  const commitCancel = useCallback(() => {
+    changeCanceled.current = true;
+    onCommitCancel();
+  }, [onCommitCancel]);
 
   useLayoutEffect(() => {
     const inputNode = getInputNode();
@@ -50,7 +64,22 @@ export default function EditorContainer<R, SR>({
   }, [getInputNode]);
 
   // close editor when scrolling
-  useEffect(() => onCommitCancel, [scrollTop, scrollLeft, onCommitCancel]);
+  useEffect(() => {
+    if (scrollLeft !== prevScrollLeft.current || scrollTop !== prevScrollTop.current) {
+      commitCancel();
+    }
+  }, [commitCancel, scrollLeft, scrollTop]);
+
+  useEffect(() => () => {
+    isUnmounting.current = true;
+  }, []);
+
+  // commit changes when editor is closed
+  useEffect(() => () => {
+    if (isUnmounting.current && !changeCommitted.current && !changeCanceled.current) {
+      commit();
+    }
+  });
 
   function getInitialValue() {
     const value = row[column.key as keyof R];
@@ -104,16 +133,19 @@ export default function EditorContainer<R, SR>({
     if (!editorRef.current) return;
     const updated = editorRef.current.getValue();
     if (isNewValueValid(updated)) {
+      changeCommitted.current = true;
       const cellKey = column.key;
       onCommit({ cellKey, rowIdx, updated });
     }
   }
 
-  function onKeyDown(e: KeyboardEvent<HTMLElement>) {
+  function onKeyDown(e: KeyboardEvent) {
     if (preventDefaultNavigation(e.key)) {
       e.stopPropagation();
     } else if (['Enter', 'Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
       commit();
+    } else if (e.key === 'Escape') {
+      commitCancel();
     }
   }
 
@@ -126,9 +158,9 @@ export default function EditorContainer<R, SR>({
           column={column}
           value={getInitialValue() as R[keyof R & string] & R[keyof R & number] & R[keyof R & symbol]}
           row={row}
-          height={height}
+          height={rowHeight}
           onCommit={commit}
-          onCommitCancel={onCommitCancel}
+          onCommitCancel={commitCancel}
           onOverrideKeyDown={onKeyDown}
         />
       );
@@ -144,20 +176,19 @@ export default function EditorContainer<R, SR>({
     );
   }
 
-  const className = classNames('rdg-editor-container', {
-    'has-error': !isValid
+  const className = clsx('rdg-editor-container', {
+    'rdg-editor-invalid': !isValid
   });
 
   return (
     <ClickOutside onClickOutside={commit}>
       <div
         className={className}
-        style={{ height, width, left, top }}
+        style={{ height: rowHeight, width: column.width, left, top }}
         onKeyDown={onKeyDown}
         onContextMenu={preventDefault}
       >
         {createEditor()}
-        {!isValid && <Clear className="form-control-feedback" />}
       </div>
     </ClickOutside>
   );

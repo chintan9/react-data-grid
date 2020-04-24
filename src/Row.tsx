@@ -1,24 +1,20 @@
-import classNames from 'classnames';
-import React from 'react';
+import React, { memo } from 'react';
+import clsx from 'clsx';
 
 import Cell from './Cell';
 import { RowRendererProps } from './common/types';
 import { preventDefault, wrapEvent } from './utils';
 
-export default function Row<R, SR = unknown>({
+function Row<R, SR = unknown>({
   cellRenderer: CellRenderer = Cell,
   className,
-  enableCellRangeSelection,
   eventBus,
-  height,
   rowIdx,
   isRowSelected,
   lastFrozenColumnIndex,
   onRowClick,
   row,
-  scrollLeft,
   viewportColumns,
-  width,
   onDragEnter,
   onDragOver,
   onDrop,
@@ -35,26 +31,7 @@ export default function Row<R, SR = unknown>({
     event.dataTransfer.dropEffect = 'copy';
   }
 
-  function getCells() {
-    return viewportColumns.map(column => {
-      return (
-        <CellRenderer
-          key={column.key}
-          rowIdx={rowIdx}
-          column={column}
-          lastFrozenColumnIndex={lastFrozenColumnIndex}
-          row={row}
-          scrollLeft={column.frozen && typeof scrollLeft === 'number' ? scrollLeft : undefined}
-          isRowSelected={isRowSelected}
-          eventBus={eventBus}
-          onRowClick={onRowClick}
-          enableCellRangeSelection={enableCellRangeSelection}
-        />
-      );
-    });
-  }
-
-  className = classNames(
+  className = clsx(
     'rdg-row',
     `rdg-row-${rowIdx % 2 === 0 ? 'even' : 'odd'}`,
     { 'rdg-row-selected': isRowSelected },
@@ -67,13 +44,25 @@ export default function Row<R, SR = unknown>({
   return (
     <div
       className={className}
-      style={{ width, height }}
       onDragEnter={wrapEvent(handleDragEnter, onDragEnter)}
       onDragOver={wrapEvent(handleDragOver, onDragOver)}
       onDrop={wrapEvent(preventDefault, onDrop)}
       {...props}
     >
-      {getCells()}
+      {viewportColumns.map(column => (
+        <CellRenderer
+          key={column.key}
+          rowIdx={rowIdx}
+          column={column}
+          lastFrozenColumnIndex={lastFrozenColumnIndex}
+          row={row}
+          isRowSelected={isRowSelected}
+          eventBus={eventBus}
+          onRowClick={onRowClick}
+        />
+      ))}
     </div>
   );
 }
+
+export default memo(Row) as <R, SR>(props: RowRendererProps<R, SR>) => JSX.Element;

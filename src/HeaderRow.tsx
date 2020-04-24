@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, memo } from 'react';
 
 import HeaderCell from './HeaderCell';
 import { CalculatedColumn } from './common/types';
@@ -6,33 +6,32 @@ import { assertIsValidKey } from './utils';
 import { DataGridProps } from './DataGrid';
 
 type SharedDataGridProps<R, K extends keyof R, SR> = Pick<DataGridProps<R, K, SR>,
-| 'draggableHeaderCell'
-| 'rows'
-| 'onHeaderDrop'
-| 'onSelectedRowsChange'
-| 'sortColumn'
-| 'sortDirection'
-| 'onSort'
-| 'rowKey'
+  | 'rows'
+  | 'onSelectedRowsChange'
+  | 'sortColumn'
+  | 'sortDirection'
+  | 'onSort'
+  | 'rowKey'
 >;
 
 export interface HeaderRowProps<R, K extends keyof R, SR> extends SharedDataGridProps<R, K, SR> {
-  height: number;
-  width: number;
   lastFrozenColumnIndex: number;
   columns: readonly CalculatedColumn<R, SR>[];
   allRowsSelected: boolean;
-  scrollLeft: number | undefined;
-  onColumnResize(column: CalculatedColumn<R, SR>, width: number): void;
+  onColumnResize: (column: CalculatedColumn<R, SR>, width: number) => void;
 }
 
-export default function HeaderRow<R, K extends keyof R, SR>({
-  height,
-  width,
-  onSelectedRowsChange,
-  rowKey,
+function HeaderRow<R, K extends keyof R, SR>({
+  columns,
+  lastFrozenColumnIndex,
   rows,
-  ...props
+  rowKey,
+  onSelectedRowsChange,
+  allRowsSelected,
+  onColumnResize,
+  sortColumn,
+  sortDirection,
+  onSort
 }: HeaderRowProps<R, K, SR>) {
   const handleAllRowsSelectionChange = useCallback((checked: boolean) => {
     if (!onSelectedRowsChange) return;
@@ -50,29 +49,24 @@ export default function HeaderRow<R, K extends keyof R, SR>({
   }, [onSelectedRowsChange, rows, rowKey]);
 
   return (
-    <div
-      className="rdg-header-row"
-      style={{ width, height, lineHeight: `${height}px` }}
-    >
-      {props.columns.map(column => {
+    <div className="rdg-header-row">
+      {columns.map(column => {
         return (
           <HeaderCell<R, SR>
             key={column.key}
             column={column}
-            lastFrozenColumnIndex={props.lastFrozenColumnIndex}
-            height={height}
-            onResize={props.onColumnResize}
-            onHeaderDrop={props.onHeaderDrop}
-            allRowsSelected={props.allRowsSelected}
+            lastFrozenColumnIndex={lastFrozenColumnIndex}
+            onResize={onColumnResize}
+            allRowsSelected={allRowsSelected}
             onAllRowsSelectionChange={handleAllRowsSelectionChange}
-            draggableHeaderCell={props.draggableHeaderCell}
-            onSort={props.onSort}
-            sortColumn={props.sortColumn}
-            sortDirection={props.sortDirection}
-            scrollLeft={column.frozen ? props.scrollLeft : undefined}
+            onSort={onSort}
+            sortColumn={sortColumn}
+            sortDirection={sortDirection}
           />
         );
       })}
     </div>
   );
 }
+
+export default memo(HeaderRow) as <R, K extends keyof R, SR>(props: HeaderRowProps<R, K, SR>) => JSX.Element;

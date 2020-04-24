@@ -1,9 +1,7 @@
-'use strict';
-
 // For a detailed explanation regarding each configuration property, visit:
 // https://jestjs.io/docs/en/configuration.html
 
-module.exports = {
+export default {
   testEnvironment: 'jest-environment-jsdom-sixteen',
   preset: 'ts-jest',
   globals: {
@@ -21,9 +19,6 @@ module.exports = {
     'text'
   ],
   restoreMocks: true,
-  moduleNameMapper: {
-    '^@material-ui/icons$': '<rootDir>/jest/iconsMock.ts'
-  },
   setupFiles: [
     '<rootDir>/jest/setupTests.ts'
   ],

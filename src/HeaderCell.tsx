@@ -1,5 +1,5 @@
 import React, { createElement } from 'react';
-import classNames from 'classnames';
+import clsx from 'clsx';
 
 import { CalculatedColumn } from './common/types';
 import { HeaderRowProps } from './HeaderRow';
@@ -10,27 +10,25 @@ type SharedHeaderRowProps<R, SR> = Pick<HeaderRowProps<R, never, SR>,
   | 'sortColumn'
   | 'sortDirection'
   | 'onSort'
-  | 'height'
-  | 'onHeaderDrop'
   | 'allRowsSelected'
-  | 'draggableHeaderCell'
 >;
 
 export interface HeaderCellProps<R, SR> extends SharedHeaderRowProps<R, SR> {
   column: CalculatedColumn<R, SR>;
   lastFrozenColumnIndex: number;
-  scrollLeft: number | undefined;
-  onResize(column: CalculatedColumn<R, SR>, width: number): void;
-  onAllRowsSelectionChange(checked: boolean): void;
+  onResize: (column: CalculatedColumn<R, SR>, width: number) => void;
+  onAllRowsSelectionChange: (checked: boolean) => void;
 }
 
 export default function HeaderCell<R, SR>({
-  height,
   column,
+  lastFrozenColumnIndex,
+  onResize,
   allRowsSelected,
   onAllRowsSelectionChange,
-  scrollLeft,
-  ...props
+  sortColumn,
+  sortDirection,
+  onSort
 }: HeaderCellProps<R, SR>) {
   function getCell() {
     if (!column.headerRenderer) return column.name;
@@ -44,27 +42,23 @@ export default function HeaderCell<R, SR>({
     cell = (
       <SortableHeaderCell
         column={column}
-        onSort={props.onSort}
-        sortColumn={props.sortColumn}
-        sortDirection={props.sortDirection}
+        onSort={onSort}
+        sortColumn={sortColumn}
+        sortDirection={sortDirection}
       >
         {cell}
       </SortableHeaderCell>
     );
   }
 
-  const className = classNames('rdg-cell', column.headerCellClass, {
+  const className = clsx('rdg-cell', column.headerCellClass, {
     'rdg-cell-frozen': column.frozen,
-    'rdg-cell-frozen-last': column.idx === props.lastFrozenColumnIndex
+    'rdg-cell-frozen-last': column.idx === lastFrozenColumnIndex
   });
   const style: React.CSSProperties = {
     width: column.width,
     left: column.left
   };
-
-  if (typeof scrollLeft === 'number') {
-    style.transform = `translateX(${scrollLeft}px)`;
-  }
 
   cell = (
     <div
@@ -79,22 +73,10 @@ export default function HeaderCell<R, SR>({
     cell = (
       <ResizableHeaderCell
         column={column}
-        onResize={props.onResize}
+        onResize={onResize}
       >
         {cell as React.ReactElement<React.ComponentProps<'div'>>}
       </ResizableHeaderCell>
-    );
-  }
-
-  const DraggableHeaderCell = props.draggableHeaderCell;
-  if (column.draggable && DraggableHeaderCell) {
-    return (
-      <DraggableHeaderCell
-        column={column}
-        onHeaderDrop={props.onHeaderDrop!}
-      >
-        {cell}
-      </DraggableHeaderCell>
     );
   }
 
